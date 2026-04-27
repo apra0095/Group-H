@@ -1,68 +1,256 @@
 ---
 title: "High-Dimensional Data Analysis Project"
 author: "Group 3H"
-format: pdf
+date: "April  , 2026"
+format: 
+    pdf:
+        toc: true
 editor: visual
 ---
 
-## Introduction (120 words)
-- Context of stock return analysis
-- Objective of the study
-- Overview of research questions
+# Introduction (120 words)
+The analysis of stock returns is a fundamental task in finance, aimed at understanding the trade-off between risk and return. This report analyse the monthly returns of 100 New York Stock Exchange (NYSE) listed companies from 2005 to 2019. By applying high-dimensional data techniques, we seek to break down these returns into systematic risk, driven by broad market movements and idiosyncratic risk or unique to specific firms or industries.
 
-## Data and Preparation (150 words)
-- Load library and read data sources
+The primary objective is to evaluate whether latent factors extracted mathematically-align with observable market benchmarks like the S&P500. Specifically, we test if the first principal component represents the market, examine the validity of the Fama-French Three Factor model, and identify industry-specific sensitivites to provide actionable hedging recommendations for diversified portofilos.
+
+# Data and Preparation (150 words)
 - Important variables description
 - Data cleaning and formatting
 - Industry classification from stock identifiers
 - Data validation (dimensions and missing values)
 
-## Preliminary Analysis (EDA) (180 words)
+Data preparation is the foundation of high-dimensional analysis. We utilize `SampleH.csv` (stock returns) and `MarketFactors.csv` (benchmarks).
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+#| echo: false
+#| label: Load Libraries and Data
+
+# 1. Load Libraries
+library(tidyverse)
+library(janitor)
+library(psych)
+
+# 2. Load Data
+stocks <- read_csv("SampleH.csv")
+market_factors <- read_csv("MarketFactors.csv")
+
+# 3. Define the mapping of letters to Industry Names
+industry_lookup <- c(
+  "B" = "Mining",
+  "C" = "Construction",
+  "D" = "Manufacturing",
+  "E" = "Transportation and Public Utilities",
+  "F" = "Wholesale Trade",
+  "G" = "Retail Trade",
+  "H" = "Finance, Insurance and Real Estate",
+  "I" = "Services"
+  )
+
+# 4. Transform and Merge Data
+# We pivot the stocks to a 'long' format so each row is a unique Stock-Date observation
+data_complete <- stocks |> 
+    pivot_longer(
+        # Keep Date as is
+        cols = -Date,
+        # New column for stock codes
+        names_to = "stock_id",
+        # new column for the return values
+        values_to = "return"
+        ) |> 
+        mutate(industry_letter = substr(stock_id, 1, 1)) |> 
+        mutate(industry_name = industry_lookup[industry_letter]) |>
+        inner_join(market_factors, by = "Date") |>
+        mutate(year = substr(Date, 2, 5)) |> 
+        # Reorder: put `Return` column after `industry_name`
+        relocate(return, .after = industry_name) |> 
+        relocate(year, .before = Date) |> 
+        # clean names
+        clean_names()
+
+head(data_complete)
+
+# 5. Check dimensions and missing values
+dim(data_complete)
+sum(is.na(data_complete))
+```
+
+The final dataset contains 14,940 observations across 9 variables. This reflects the longitudinal nature of the data, covering multiple stocks over 180 months (January 2005 - December 2019). The data likely contained 83 stocks (14,940 / 180 months = 83).
+
+The industry classification maps stocks to sectors such as Mining (B), Construction (C), Manufacturing (D),  Transportation and Public Utilities (E), Wholesale Trade (F), Retail Trade (G), Finance, Insurance and Real Estate (H)  and Services (I).
+
+Variables include stock returns and three factors: Market Return, SMB (Small Minus Big, the size effect factor, capturing compensation for investing in small capitalization companies relative to large capitalization companies), and HML (High Minus Low,  the value factor, capturing the compensation for value as measured by the book to market ratio).
+
+# Preliminary Analysis (EDA) (180 words)
 - Summary statistic by Industry (mean, sd, no. of stocks)
 - Time series analysis of industry AVG returns
 - Correlation structure between industries
 
-## PCA Preparation (100 words)
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+#| echo: false
+#| label: Exploratory Data Analysis
+
+# 1. Group statistics by the 'industries' vector created earlier
+eda_summary <- data_complete |> 
+    group_by(industry_name) |> 
+    summarise(
+        avg_return = mean(return, na.rm = TRUE),
+        volatility = sd(return, na.rm = TRUE),
+        num_stocks = n_distinct(stock_id)
+    )
+eda_summary
+
+# 2. Create the Yearly Boxplot
+# We facet by industry_name to see the movement of each sector clearly
+ggplot(data_complete, aes(x = year, y = return, fill = industry_name)) +
+  geom_boxplot(outlier.size = 0.5, alpha = 0.7) +
+  facet_wrap(~industry_name, scales = "free_y") + 
+  theme_minimal() +
+  labs(
+    title = "Industry Return Distributions: 2005 - 2019",
+    subtitle = "Boxplots show median, quartiles, and volatility shifts per year",
+    x = "Year",
+    y = "Monthly Return (%)"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 8),
+    legend.position = "none"
+  )
+
+# 3. Calculate Average Monthly Returns per Industry (time series) for correlation analysis
+industry_ts <- data_complete |>
+    # Group by Industry and Date
+    group_by(industry_name, date) |>
+    # Calculate the average return for the each industry classification for that month
+    summarise(avg_return = mean(return, na.rm = TRUE), .groups = "drop") |>
+    # Pivot so each industry gets its own column
+    pivot_wider(names_from = industry_name, values_from = avg_return)
+
+# 4. Create Correlation Matrix between Industry Averages
+ind_cor_long <- industry_ts |>
+    select(-date) |> 
+    cor(use = "complete.obs") |> 
+    as.table() |> 
+    as.data.frame()
+
+# 5. Use heatmap to visualise
+ggplot(ind_cor_long, aes(Var1, Var2, fill = Freq)) +
+  geom_tile() +
+  # Add the numbers on top
+  geom_text(aes(label = round(Freq, 2)), color = "black", size = 5) +
+  # Use a standard diverging color scale
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0, limit = c(-1,1)) +
+  theme_minimal() +
+  labs(title = "Industry Correlations", x = "", y = "", fill = "Corr") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+Preliminary correlation analysis indicates significant systemic integration between industries. For instance, the correlation coefficient between sectors Transportation and Public Utilities
+(E) and Finance, Insurance and Real Estate (H) is 0.80, highlighting a shared sensitivity to market conditions. Given this high dimensionality and strong inter-variable relationship, PCA is an appropriate methodology for isolating the primary component that parallel with broad market movements.
+
+# PCA Preparation (100 words)
 - Selection of stocks return variables
 - Data standardisation
 - PCA implementation
 
-## PCA and Latent Factors Analysis (800 words)
-### Q1 Does the largest principal component coincide with market returns?
+The selection of variables for PCA is limited to the 83 monthly stock return columns, as including the date or benchmark factors would bias the mathematical extraction of common variation. Since these stocks belong to diverse sectors with varying levels of price volatility, standardisation is a must. Without scaling, stocks with the highest return variance would disproportionately influence the principal components, regardless of their actual contribution to market-wide trends. By centering and scaling the data, we ensure each company contributes equally to the analysis.
+The PCA is then implemented on this standardised matrix to transform the correlated returns into a set of linearly uncorrelated principal components.
+
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+#| echo: false
+#| label: PCA Preparation and Execution
+
+# 1. Select only stock return columns (numeric variables)
+# We exclude 'date' and the Fama-French factors
+pca_input <- stocks |> select(-Date)
+
+# 2. Standardise and Run PCA
+# 'scale. = TRUE' ensures data is standardised (mean=0, sd=1)
+pca_res <- prcomp(pca_input, scale. = TRUE)
+```
+
+# PCA and Latent Factors Analysis (800 words)
+## Q1 Does the largest principal component coincide with market returns?
 - Scree plot and component selection
 - Variance explained by principal components
 - Comparison of PC1 with Market Return
 - Interpretation of PC1 as a market factor
 
-### Q2 Do Market Return, SMB, and HML explain common variation in stock returns?
+To determine the number of components representing meaningful signals, we generate a Scree Plot. In high-dimensional financial data, we typically observe a sharp elbow after the first component, which indicates that one dominant latent factor is responsible for the majority of the co-movement across all companies.
+
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+#| echo: false
+#| label: Scree Plot and Variance Analysis
+
+# 1. Visualize Eigenvalues
+screeplot(pca_res, type = "lines", main = "Scree Plot of Stock Returns")
+abline(h = 1, col="red", lty=2) # Kaiser Criterion threshold
+
+# 2. Calculate Variance Explained
+summary(pca_res)$importance[, 1:5]
+```
+
+The Variance Explained by the first principal component (PC1) is a critical measure of systematic risk. If PC1 accounts for a large percentage (e.g., >30%) of the total variation in an 83-stock universe, it suggests a powerful common driver.
+
+To test if this mathematical construct is in conformity with the actual economy, we compare the PC1 scores against the observable Market Return provided in the dataset.
+
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+#| echo: false
+#| label: Comparison with Market Return
+
+# 1. Extract PC1 scores
+pc1_scores <- pca_res$x[, 1]
+
+# 2. Correlate with Market Return
+market_test_corr <- cor(pc1_scores, market_factors$MarketReturn)
+
+cat("Correlation between PC1 and Market Return:", round(market_test_corr, 4))
+```
+
+A correlation magnitude near or above 0.90 indicates compelling evidence that the first principal component (PC1) is a robust proxy for the broad market. While PCA is a purely mathematical algorithm with no prior knowledge of financial indices, the fact that its primary axis of variation aligns so closely with the broad market return confirms that the market is the single most significant latent force driving individual stock returns. Consequently, PC1 can be interpreted as the Systematic Risk Factor, representing macroeconomic events that affect the entire 83-stock universe together.
+
+## Q2 Do Market Return, SMB, and HML explain common variation in stock returns?
 - Integration of PCA/factor scores with market factors
 - Correlation analysis with Market Return
 - Correlation analysis with SMB and HML
 - Evaluation of observable vs latent factors
 
-### Q3 Which industries move in the same direction as the common factors?
+## Q3 Which industries move in the same direction as the common factors?
 - Interpretation of principal component loadings
 - Factor loadings by industry
 - Industry-level co-movement patterns
 - Heterogeneity within industries
 
-### Q4 Which industry has the highest systematic risk?
+## Q4 Which industry has the highest systematic risk?
 - Measurement of systematic risk using factor loadings
 - Comparison of absolute loadings across industries
 - Identification of high-risk industries
 
-### Q5 Which industry is counter-cyclical for hedging purposes?
+## Q5 Which industry is counter-cyclical for hedging purposes?
 - Identification of negative or weak loadings
 - Industry behaviour relative to market factor
 - Hedging implications
 
 
-## Conclusion (150 words)
+# Conclusion (150 words)
 - Summary of key findings
 - Direct answers to Q1 - Q5
 - Implications for investment decisions
 
 
-## Reference
+# Reference
 
-## Appendix
+# Appendix
