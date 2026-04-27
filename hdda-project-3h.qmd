@@ -1,0 +1,68 @@
+---
+title: "High-Dimensional Data Analysis Project"
+author: "Group 3H"
+format: pdf
+editor: visual
+---
+
+## Introduction (120 words)
+- Context of stock return analysis
+- Objective of the study
+- Overview of research questions
+
+## Data and Preparation (150 words)
+- Load library and read data sources
+- Important variables description
+- Data cleaning and formatting
+- Industry classification from stock identifiers
+- Data validation (dimensions and missing values)
+
+## Preliminary Analysis (EDA) (180 words)
+- Summary statistic by Industry (mean, sd, no. of stocks)
+- Time series analysis of industry AVG returns
+- Correlation structure between industries
+
+## PCA Preparation (100 words)
+- Selection of stocks return variables
+- Data standardisation
+- PCA implementation
+
+## PCA and Latent Factors Analysis (800 words)
+### Q1 Does the largest principal component coincide with market returns?
+- Scree plot and component selection
+- Variance explained by principal components
+- Comparison of PC1 with Market Return
+- Interpretation of PC1 as a market factor
+
+### Q2 Do Market Return, SMB, and HML explain common variation in stock returns?
+- Integration of PCA/factor scores with market factors
+- Correlation analysis with Market Return
+- Correlation analysis with SMB and HML
+- Evaluation of observable vs latent factors
+
+### Q3 Which industries move in the same direction as the common factors?
+- Interpretation of principal component loadings
+- Factor loadings by industry
+- Industry-level co-movement patterns
+- Heterogeneity within industries
+
+### Q4 Which industry has the highest systematic risk?
+- Measurement of systematic risk using factor loadings
+- Comparison of absolute loadings across industries
+- Identification of high-risk industries
+
+### Q5 Which industry is counter-cyclical for hedging purposes?
+- Identification of negative or weak loadings
+- Industry behaviour relative to market factor
+- Hedging implications
+
+
+## Conclusion (150 words)
+- Summary of key findings
+- Direct answers to Q1 - Q5
+- Implications for investment decisions
+
+
+## Reference
+
+## Appendix
