@@ -9,17 +9,20 @@ editor: visual
 ---
 
 # Introduction (120 words)
-The analysis of stock returns is a fundamental task in finance, aimed at understanding the trade-off between risk and return. This report analyse the monthly returns of 100 New York Stock Exchange (NYSE) listed companies from 2005 to 2019. By applying high-dimensional data techniques, we seek to break down these returns into systematic risk, driven by broad market movements and idiosyncratic risk or unique to specific firms or industries.
 
-The primary objective is to evaluate whether latent factors extracted mathematically-align with observable market benchmarks like the S&P500. Specifically, we test if the first principal component represents the market, examine the validity of the Fama-French Three Factor model, and identify industry-specific sensitivites to provide actionable hedging recommendations for diversified portofilos.
+The analysis of stock returns is a key task in finance, aimed at understanding the relationship between risk and return. This report analyses the monthly returns of 100 New York Stock Exchange listed companies from 2005 to 2019. Using high-dimensional data techniques, the study separates stock returns into systematic risk driven by overall market movements and idiosyncratic risk specific to individual firms or industries.
+
+The objective is to examine whether latent factors align with observable market benchmarks such as the S&P 500. In particular, the analysis tests whether the first principal component represents the market, whether the Fama-French three-factor model explains common variation, which industries move with these factors, which industries carry higher systematic risk, and which industries may provide hedging benefits.
 
 # Data and Preparation (150 words)
-- Important variables description
-- Data cleaning and formatting
-- Industry classification from stock identifiers
-- Data validation (dimensions and missing values)
+
+-   Important variables description
+-   Data cleaning and formatting
+-   Industry classification from stock identifiers
+-   Data validation (dimensions and missing values)
 
 Data preparation is the foundation of high-dimensional analysis. We utilize `SampleH.csv` (stock returns) and `MarketFactors.csv` (benchmarks).
+
 ```{r}
 #| code-fold: true
 #| message: false
@@ -31,6 +34,7 @@ Data preparation is the foundation of high-dimensional analysis. We utilize `Sam
 library(tidyverse)
 library(janitor)
 library(psych)
+library(knitr)
 
 # 2. Load Data
 stocks <- read_csv("SampleH.csv")
@@ -78,14 +82,15 @@ sum(is.na(data_complete))
 
 The final dataset contains 14,940 observations across 9 variables. This reflects the longitudinal nature of the data, covering multiple stocks over 180 months (January 2005 - December 2019). The data likely contained 83 stocks (14,940 / 180 months = 83).
 
-The industry classification maps stocks to sectors such as Mining (B), Construction (C), Manufacturing (D),  Transportation and Public Utilities (E), Wholesale Trade (F), Retail Trade (G), Finance, Insurance and Real Estate (H)  and Services (I).
+The industry classification maps stocks to sectors such as Mining (B), Construction (C), Manufacturing (D), Transportation and Public Utilities (E), Wholesale Trade (F), Retail Trade (G), Finance, Insurance and Real Estate (H) and Services (I).
 
-Variables include stock returns and three factors: Market Return, SMB (Small Minus Big, the size effect factor, capturing compensation for investing in small capitalization companies relative to large capitalization companies), and HML (High Minus Low,  the value factor, capturing the compensation for value as measured by the book to market ratio).
+Variables include stock returns and three factors: Market Return, SMB (Small Minus Big, the size effect factor, capturing compensation for investing in small capitalization companies relative to large capitalization companies), and HML (High Minus Low, the value factor, capturing the compensation for value as measured by the book to market ratio).
 
 # Preliminary Analysis (EDA) (180 words)
-- Summary statistic by Industry (mean, sd, no. of stocks)
-- Time series analysis of industry AVG returns
-- Correlation structure between industries
+
+-   Summary statistic by Industry (mean, sd, no. of stocks)
+-   Time series analysis of industry AVG returns
+-   Correlation structure between industries
 
 ```{r}
 #| code-fold: true
@@ -149,16 +154,15 @@ ggplot(ind_cor_long, aes(Var1, Var2, fill = Freq)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
-Preliminary correlation analysis indicates significant systemic integration between industries. For instance, the correlation coefficient between sectors Transportation and Public Utilities
-(E) and Finance, Insurance and Real Estate (H) is 0.80, highlighting a shared sensitivity to market conditions. Given this high dimensionality and strong inter-variable relationship, PCA is an appropriate methodology for isolating the primary component that parallel with broad market movements.
+Preliminary correlation analysis indicates significant systemic integration between industries. For instance, the correlation coefficient between sectors Transportation and Public Utilities (E) and Finance, Insurance and Real Estate (H) is 0.80, highlighting a shared sensitivity to market conditions. Given this high dimensionality and strong inter-variable relationship, PCA is an appropriate methodology for isolating the primary component that parallel with broad market movements.
 
 # PCA Preparation (100 words)
-- Selection of stocks return variables
-- Data standardisation
-- PCA implementation
 
-The selection of variables for PCA is limited to the 83 monthly stock return columns, as including the date or benchmark factors would bias the mathematical extraction of common variation. Since these stocks belong to diverse sectors with varying levels of price volatility, standardisation is a must. Without scaling, stocks with the highest return variance would disproportionately influence the principal components, regardless of their actual contribution to market-wide trends. By centering and scaling the data, we ensure each company contributes equally to the analysis.
-The PCA is then implemented on this standardised matrix to transform the correlated returns into a set of linearly uncorrelated principal components.
+-   Selection of stocks return variables
+-   Data standardisation
+-   PCA implementation
+
+The selection of variables for PCA is limited to the 83 monthly stock return columns, as including the date or benchmark factors would bias the mathematical extraction of common variation. Since these stocks belong to diverse sectors with varying levels of price volatility, standardisation is a must. Without scaling, stocks with the highest return variance would disproportionately influence the principal components, regardless of their actual contribution to market-wide trends. By centering and scaling the data, we ensure each company contributes equally to the analysis. The PCA is then implemented on this standardised matrix to transform the correlated returns into a set of linearly uncorrelated principal components.
 
 ```{r}
 #| code-fold: true
@@ -177,11 +181,13 @@ pca_res <- prcomp(pca_input, scale. = TRUE)
 ```
 
 # PCA and Latent Factors Analysis (800 words)
+
 ## Q1 Does the largest principal component coincide with market returns?
-- Scree plot and component selection
-- Variance explained by principal components
-- Comparison of PC1 with Market Return
-- Interpretation of PC1 as a market factor
+
+-   Scree plot and component selection
+-   Variance explained by principal components
+-   Comparison of PC1 with Market Return
+-   Interpretation of PC1 as a market factor
 
 To determine the number of components representing meaningful signals, we generate a Scree Plot. In high-dimensional financial data, we typically observe a sharp elbow after the first component, which indicates that one dominant latent factor is responsible for the majority of the co-movement across all companies.
 
@@ -200,7 +206,7 @@ abline(h = 1, col="red", lty=2) # Kaiser Criterion threshold
 summary(pca_res)$importance[, 1:5]
 ```
 
-The Variance Explained by the first principal component (PC1) is a critical measure of systematic risk. If PC1 accounts for a large percentage (e.g., >30%) of the total variation in an 83-stock universe, it suggests a powerful common driver.
+The Variance Explained by the first principal component (PC1) is a critical measure of systematic risk. If PC1 accounts for a large percentage (e.g., \>30%) of the total variation in an 83-stock universe, it suggests a powerful common driver.
 
 To test if this mathematical construct is in conformity with the actual economy, we compare the PC1 scores against the observable Market Return provided in the dataset.
 
@@ -223,34 +229,89 @@ cat("Correlation between PC1 and Market Return:", round(market_test_corr, 4))
 A correlation magnitude near or above 0.90 indicates compelling evidence that the first principal component (PC1) is a robust proxy for the broad market. While PCA is a purely mathematical algorithm with no prior knowledge of financial indices, the fact that its primary axis of variation aligns so closely with the broad market return confirms that the market is the single most significant latent force driving individual stock returns. Consequently, PC1 can be interpreted as the Systematic Risk Factor, representing macroeconomic events that affect the entire 83-stock universe together.
 
 ## Q2 Do Market Return, SMB, and HML explain common variation in stock returns?
-- Integration of PCA/factor scores with market factors
-- Correlation analysis with Market Return
-- Correlation analysis with SMB and HML
-- Evaluation of observable vs latent factors
+
+-   Integration of PCA/factor scores with market factors
+-   Correlation analysis with Market Return
+-   Correlation analysis with SMB and HML
+-   Evaluation of observable vs latent factors
+
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+#| echo: false
+#| label: tbl-q2-cor
+#| tbl-cap: Correlation between Principal Components and Market Factors
+
+# Extract PCA scores
+pc_scores <- as.data.frame(pca_res$x) |>
+  mutate(Date = stocks$Date)
+
+# Join PCA scores with market factors by Date
+q2_data <- pc_scores |>
+  inner_join(market_factors, by = "Date")
+
+# Correlation table between first 3 PCs and market factors
+q2_cor_table <- q2_data |>
+  select(PC1, PC2, PC3, MarketReturn, SMB, HML) |>
+  cor(use = "complete.obs") |>
+  as.data.frame() |>
+  rownames_to_column("component") |>
+  filter(component %in% c("PC1", "PC2", "PC3")) |>
+  select(component, MarketReturn, SMB, HML) |>
+  mutate(across(where(is.numeric), ~ round(.x, 4)))
+
+kable(q2_cor_table)
+
+```
+
+To examine whether market factors explain common variation in stock returns, we combined the principal component scores with the market factors using the date variable. We then calculated correlations between the principal components and Market Return, SMB, and HML.
+
+As shown in @tbl-q2-cor, PC1 has a very strong positive relationship with Market Return (0.9657), which means it captures overall market movement. PC1 also has a moderate relationship with SMB (0.4817) and a weaker relationship with HML (0.2852). PC2 has very little relationship with Market Return (0.0225), but shows a moderate relationship with HML (0.4157), suggesting it may capture value-related effects. PC3 shows very weak relationships with all three factors.
+
+These results show that Market Return explains most of the variation in stock returns, while SMB and HML only explain a smaller part. This means the Fama-French three-factor model is only partially supported and does not fully explain the patterns found in the data.
 
 ## Q3 Which industries move in the same direction as the common factors?
-- Interpretation of principal component loadings
-- Factor loadings by industry
-- Industry-level co-movement patterns
-- Heterogeneity within industries
+
+-   Interpretation of principal component loadings
+-   Factor loadings by industry
+-   Industry-level co-movement patterns
+-   Heterogeneity within industries
 
 ## Q4 Which industry has the highest systematic risk?
-- Measurement of systematic risk using factor loadings
-- Comparison of absolute loadings across industries
-- Identification of high-risk industries
+
+-   Measurement of systematic risk using factor loadings
+-   Comparison of absolute loadings across industries
+-   Identification of high-risk industries
 
 ## Q5 Which industry is counter-cyclical for hedging purposes?
-- Identification of negative or weak loadings
-- Industry behaviour relative to market factor
-- Hedging implications
 
+-   Identification of negative or weak loadings
+-   Industry behaviour relative to market factor
+-   Hedging implications
 
 # Conclusion (150 words)
-- Summary of key findings
-- Direct answers to Q1 - Q5
-- Implications for investment decisions
 
+-   Summary of key findings
+-   Direct answers to Q1 - Q5
+-   Implications for investment decisions
 
 # Reference
 
 # Appendix
+
+## Data and Preparation
+
+## Preliminary Analysis
+
+## PCA Preparation
+
+## Q1
+
+## Q2
+
+## Q3
+
+## Q4
+
+## Q5
