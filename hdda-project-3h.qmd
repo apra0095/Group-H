@@ -16,10 +16,10 @@ The objective is to examine whether latent factors align with observable market 
 
 # Data and Preparation (150 words)
 
--   Important variables description
--   Data cleaning and formatting
--   Industry classification from stock identifiers
--   Data validation (dimensions and missing values)
+- Important variables description
+- Data cleaning and formatting
+- Industry classification from stock identifiers
+- Data validation (dimensions and missing values)
 
 Data preparation is the foundation of high-dimensional analysis. We utilize `SampleH.csv` (stock returns) and `MarketFactors.csv` (benchmarks).
 
@@ -88,9 +88,9 @@ Variables include stock returns and three factors: Market Return, SMB (Small Min
 
 # Preliminary Analysis (EDA) (180 words)
 
--   Summary statistic by Industry (mean, sd, no. of stocks)
--   Time series analysis of industry AVG returns
--   Correlation structure between industries
+- Summary statistic by Industry (mean, sd, no. of stocks)
+- Time series analysis of industry AVG returns
+- Correlation structure between industries
 
 ```{r}
 #| code-fold: true
@@ -158,9 +158,9 @@ Preliminary correlation analysis indicates significant systemic integration betw
 
 # PCA Preparation (100 words)
 
--   Selection of stocks return variables
--   Data standardisation
--   PCA implementation
+- Selection of stocks return variables
+- Data standardisation
+- PCA implementation
 
 The selection of variables for PCA is limited to the 83 monthly stock return columns, as including the date or benchmark factors would bias the mathematical extraction of common variation. Since these stocks belong to diverse sectors with varying levels of price volatility, standardisation is a must. Without scaling, stocks with the highest return variance would disproportionately influence the principal components, regardless of their actual contribution to market-wide trends. By centering and scaling the data, we ensure each company contributes equally to the analysis. The PCA is then implemented on this standardised matrix to transform the correlated returns into a set of linearly uncorrelated principal components.
 
@@ -184,10 +184,10 @@ pca_res <- prcomp(pca_input, scale. = TRUE)
 
 ## Q1 Does the largest principal component coincide with market returns?
 
--   Scree plot and component selection
--   Variance explained by principal components
--   Comparison of PC1 with Market Return
--   Interpretation of PC1 as a market factor
+- Scree plot and component selection
+- Variance explained by principal components
+- Comparison of PC1 with Market Return
+- Interpretation of PC1 as a market factor
 
 To determine the number of components representing meaningful signals, we generate a Scree Plot. In high-dimensional financial data, we typically observe a sharp elbow after the first component, which indicates that one dominant latent factor is responsible for the majority of the co-movement across all companies.
 
@@ -230,10 +230,10 @@ A correlation magnitude near or above 0.90 indicates compelling evidence that th
 
 ## Q2 Do Market Return, SMB, and HML explain common variation in stock returns?
 
--   Integration of PCA/factor scores with market factors
--   Correlation analysis with Market Return
--   Correlation analysis with SMB and HML
--   Evaluation of observable vs latent factors
+- Integration of PCA/factor scores with market factors
+- Correlation analysis with Market Return
+- Correlation analysis with SMB and HML
+- Evaluation of observable vs latent factors
 
 ```{r}
 #| code-fold: true
@@ -273,28 +273,86 @@ These results show that Market Return explains most of the variation in stock re
 
 ## Q3 Which industries move in the same direction as the common factors?
 
--   Interpretation of principal component loadings
--   Factor loadings by industry
--   Industry-level co-movement patterns
--   Heterogeneity within industries
+- Interpretation of principal component loadings
+- Factor loadings by industry
+- Industry-level co-movement patterns
+- Heterogeneity within industries
 
 ## Q4 Which industry has the highest systematic risk?
 
--   Measurement of systematic risk using factor loadings
--   Comparison of absolute loadings across industries
--   Identification of high-risk industries
+- Measurement of systematic risk using factor loadings
+- Comparison of absolute loadings across industries
+- Identification of high-risk industries
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| code-fold: true
+
+#PC1 sign
+pc1_sign <- ifelse(
+  cor(pca_res$x[, 1], market_factors$MarketReturn, use = "complete.obs") < 0,
+  -1,
+  1
+)
+
+# Stock exposure to PC1
+stock_pc1 <- tibble(
+  stock_id = colnames(pca_input),
+  industry_letter = substr(stock_id, 1, 1),
+  industry_name = as.character(industry_lookup[industry_letter]),
+  pc1_loading = pc1_sign * pca_res$rotation[, 1],
+  pc1_corr = pc1_loading * pca_res$sdev[1],
+  pc1_variance_share = pc1_corr^2
+)
+```
+
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+#| echo: false
+#| label: tbl-q4-cor
+#| tbl-cap: Correlation between Principal Components and Market Factors
+
+q4_industry_risk <- stock_pc1 |>
+  group_by(industry_name) |>
+  summarise(
+    n_stocks = n(),
+    mean_pc1_corr = mean(pc1_corr, na.rm = TRUE),
+    mean_pc1_variance_share = mean(pc1_variance_share, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  arrange(desc(mean_pc1_variance_share)) |>
+  mutate(across(-c(industry_name, n_stocks), ~ round(.x, 3))) |>
+  rename(
+    Industry = industry_name,
+    `No of stocks` = n_stocks,
+    `Mean PC1 correlation` = mean_pc1_corr,
+    `Mean PC1 variance share` = mean_pc1_variance_share
+  )
+
+kable(q4_industry_risk)
+```
+
+To identify the industry with the highest systematic risk, we use PC1 as the main market-wide factor. This is reasonable because the earlier result showed that PC1 moves very closely with the actual Market Return.
+
+Based on the results on @tbl-q4-cor, Finance, Insurance and Real Estate appears to have the highest systematic risk. It has the highest average PC1 variance share, at 0.382, and the highest average PC1 correlation, at 0.571, across 32 stocks. This suggests that returns in this industry are more strongly driven by the shared market movement than the other industries.
+
+While Construction also has a relatively high PC1 variance share, at 0.322, but this result comes from only one stock. Because of that, it is risky to say as a whole industry conclusion. Finance, Insurance and Real Estate is the stronger answer because it has both high exposure to PC1 and a much larger number of stocks. This also makes sense in practice, because financial firms are usually sensitive to wider market conditions, investor confidence, credit and economic conditions.
 
 ## Q5 Which industry is counter-cyclical for hedging purposes?
 
--   Identification of negative or weak loadings
--   Industry behaviour relative to market factor
--   Hedging implications
+- Identification of negative or weak loadings
+- Industry behaviour relative to market factor
+- Hedging implications
 
 # Conclusion (150 words)
 
--   Summary of key findings
--   Direct answers to Q1 - Q5
--   Implications for investment decisions
+- Summary of key findings
+- Direct answers to Q1 - Q5
+- Implications for investment decisions
 
 # Reference
 
