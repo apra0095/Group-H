@@ -230,11 +230,6 @@ A correlation magnitude near or above 0.90 indicates compelling evidence that th
 
 ## Q2 Do Market Return, SMB, and HML explain common variation in stock returns?
 
-- Integration of PCA/factor scores with market factors
-- Correlation analysis with Market Return
-- Correlation analysis with SMB and HML
-- Evaluation of observable vs latent factors
-
 ```{r}
 #| code-fold: true
 #| message: false
@@ -273,10 +268,86 @@ These results show that Market Return explains most of the variation in stock re
 
 ## Q3 Which industries move in the same direction as the common factors?
 
-- Interpretation of principal component loadings
-- Factor loadings by industry
-- Industry-level co-movement patterns
-- Heterogeneity within industries
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+#| echo: false
+#| label: tbl-q3-load
+#| tbl-cap: Industry-level PC1 loadings
+#| 
+# Extract PC1 loadings
+pc1_loadings <- as.data.frame(pca_res$rotation) |>
+  select(PC1) |>
+  rename(pc1_loading = PC1) |>
+  rownames_to_column("stock") |>
+  mutate(industry_code = substr(stock, 1, 1)) |>
+  mutate(industry = industry_lookup[industry_code])
+
+# Summarise by industry
+q3_industry_loadings <- pc1_loadings |>
+  group_by(industry) |>
+  summarise(
+    mean_pc1_loading = mean(pc1_loading),
+    sd_pc1_loading   = sd(pc1_loading),
+    min_pc1_loading  = min(pc1_loading),
+    max_pc1_loading  = max(pc1_loading),
+    n_stocks         = dplyr::n(),
+    .groups = "drop"
+  ) |>
+  arrange(desc(mean_pc1_loading))
+
+# Rename
+q3_industry_loadings_clean <- q3_industry_loadings |>
+  rename(
+    Industry = industry,
+    `Mean PC1 Loading` = mean_pc1_loading,
+    `SD of Loading` = sd_pc1_loading,
+    `Min Loading` = min_pc1_loading,
+    `Max Loading` = max_pc1_loading,
+    `Number of Stocks` = n_stocks
+  )
+
+kable(q3_industry_loadings_clean, digits = 3)
+```
+
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+#| echo: false
+#| label: fig-q3-box
+#| fig-cap: Distribution of PC1 loadings by industry
+#| fig-width: 7
+#| fig-height: 7
+#| fig-pos: H
+
+pc1_loadings |>
+  ggplot(aes(x = reorder(industry, pc1_loading, median), y = pc1_loading)) +
+  geom_boxplot(fill = "lightblue", color = "black", width = 0.4, size = 0.7) +
+  coord_flip() +
+  labs(
+    title = "PC1 Loadings by Industry",
+    x = "Industry",
+    y = "PC1 Loading"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    axis.text.y = element_text(size = 10),
+    axis.text.x = element_text(size = 10)
+  )
+```
+
+As shown in @tbl-q3-load and @fig-q3-box, all industries have positive PC1 loadings, indicating that they move in the same direction as the dominant common factor. This confirms that the common factor affects the entire market rather than a specific group of industries.
+
+However, the strength of this relationship differs across industries. Finance, Insurance and Real Estate have the highest average loading (0.118), followed closely by Construction (0.117) and Wholesale Trade (0.107), suggesting these industries are more sensitive to the common factor. In contrast, Services (0.065) and Mining (0.079) have lower average loadings, indicating weaker exposure.
+
+More importantly, there is clear heterogeneity within industries. Finance, Insurance and Real Estate shows a relatively large spread (SD = 0.050 and a wide range from 0.005 to 0.199), indicating that stocks within this industry respond very differently to the common factor. Manufacturing and Mining also display noticeable variation, suggesting inconsistent behaviour across stocks. In contrast, Wholesale Trade and Retail Trade show smaller spreads, indicating more homogeneous responses.
+
+The Construction industry appears as a single line in @fig-q3-box and has no variation in @tbl-q3-load because it contains only one stock. As a result, it is not meaningful to assess heterogeneity within this industry.
+
+Overall, while all industries move in the same direction as the common factor, the key result is that the degree of heterogeneity varies substantially across industries, suggesting that industry classification alone does not fully explain stock behaviour.
 
 ## Q4 Which industry has the highest systematic risk?
 
@@ -368,6 +439,8 @@ While Construction also has a relatively high PC1 variance share, at 0.322, but 
 
 ## Q2 Code
 
+Table: Correlation between Principal Components and Market Factors
+
 ```{r}
 #| code-fold: true
 #| message: false
@@ -398,6 +471,58 @@ kable(q2_cor_table)
 ```
 
 ## Q3 Code
+
+Table: Industry-level PC1 loadings
+
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+#| echo: true
+#| eval: false
+
+pc1_loadings |>
+  ggplot(aes(x = reorder(industry, pc1_loading, median), y = pc1_loading)) +
+  geom_boxplot(fill = "lightblue", color = "black", width = 0.4, size = 0.7) +
+  coord_flip() +
+  labs(
+    title = "PC1 Loadings by Industry",
+    x = "Industry",
+    y = "PC1 Loading"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    axis.text.y = element_text(size = 10),
+    axis.text.x = element_text(size = 10)
+  )
+```
+
+Boxplot: Distribution of PC1 loadings by industry
+
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+#| echo: true
+#| eval: false
+
+pc1_loadings |>
+  ggplot(aes(x = reorder(industry, pc1_loading, median), y = pc1_loading)) +
+  geom_boxplot(fill = "lightblue", color = "black", width = 0.4, size = 0.7) +
+  coord_flip() +
+  labs(
+    title = "PC1 Loadings by Industry",
+    x = "Industry",
+    y = "PC1 Loading"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    axis.text.y = element_text(size = 10),
+    axis.text.x = element_text(size = 10)
+  )
+```
 
 ## Q4 Code
 
