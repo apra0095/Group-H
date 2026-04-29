@@ -319,7 +319,7 @@ kable(q3_industry_loadings_clean, digits = 3)
 #| label: fig-q3-box
 #| fig-cap: Distribution of PC1 loadings by industry
 #| fig-width: 7
-#| fig-height: 7
+#| fig-height: 4
 #| fig-pos: H
 
 pc1_loadings |>
