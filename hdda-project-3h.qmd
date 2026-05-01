@@ -16,11 +16,6 @@ The objective is to examine whether latent factors align with observable market 
 
 # Data and Preparation (150 words)
 
-- Important variables description
-- Data cleaning and formatting
-- Industry classification from stock identifiers
-- Data validation (dimensions and missing values)
-
 Data preparation is the foundation of high-dimensional analysis. We utilize `SampleH.csv` (stock returns) and `MarketFactors.csv` (benchmarks).
 
 ```{r}
@@ -29,12 +24,15 @@ Data preparation is the foundation of high-dimensional analysis. We utilize `Sam
 #| warning: false
 #| echo: false
 #| label: Load Libraries and Data
+#| tbl-cap: Sample of Dataset
 
 # 1. Load Libraries
 library(tidyverse)
 library(janitor)
 library(psych)
 library(knitr)
+library(stringr)
+library(scales)
 
 # 2. Load Data
 stocks <- read_csv("SampleH.csv")
@@ -73,11 +71,18 @@ data_complete <- stocks |>
         # clean names
         clean_names()
 
-head(data_complete)
+kable(head(data_complete))
 
 # 5. Check dimensions and missing values
-dim(data_complete)
-sum(is.na(data_complete))
+explain_dim <- function(df) {
+  dimensions <- dim(df)
+  cat("The dataset '", substitute(df), "' contains:\n", sep = "")
+  cat("- ", dimensions[1], " observations (rows)\n", sep = "")
+  cat("- ", dimensions[2], " variables (columns)\n", sep = "")
+}
+explain_dim(data_complete)
+cat("Total amoun of NA entries:", sum(is.na(data_complete)))
+
 ```
 
 The final dataset contains 14,940 observations across 9 variables. This reflects the longitudinal nature of the data, covering multiple stocks over 180 months (January 2005 - December 2019). The data likely contained 83 stocks (14,940 / 180 months = 83).
@@ -88,32 +93,63 @@ Variables include stock returns and three factors: Market Return, SMB (Small Min
 
 # Preliminary Analysis (EDA) (180 words)
 
-- Summary statistic by Industry (mean, sd, no. of stocks)
-- Time series analysis of industry AVG returns
-- Correlation structure between industries
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+#| echo: false
+#| label: Exploratory-Data-Analysis-1
+#| tbl-cap: Group statistics by the 'industries'
+
+# 1. Group statistics by the 'industries' vector created earlier
+eda_summary <- data_complete |> 
+    group_by(industry_name) |> 
+    summarise(
+        avg_return_monthly = label_percent(accuracy = 0.01)(mean(return, na.rm = TRUE)),
+        volatility = label_percent(accuracy = 0.01)(sd(return, na.rm = TRUE)),
+        num_stocks = n_distinct(stock_id)
+    ) |> 
+      arrange(desc(avg_return_monthly))
+kable(eda_summary)
+
+# create the ordered vector
+industry_order <- eda_summary$industry_name
+```
+
+The table above summarises the performance and risk of eight industry sectors based on their monthly returns and volatility:
+
+- **Top Performers**: Manufacturing leads with the highest average monthly return at 1.43%, followed closely by Wholesale Trade at 1.23%.
+
+- **Risk and Volatility**: Services is the most volatile sector (16.48%), while Finance, Insurance and Real Estate is the least volatile (7.29%).
+
+- **Sector Representation**: The Finance sector has the largest number of stocks in this dataset (32), whereas Construction is represented by only a single stock.
 
 ```{r}
 #| code-fold: true
 #| message: false
 #| warning: false
 #| echo: false
-#| label: Exploratory Data Analysis
+#| label: Exploratory Data Analysis 2
 
-# 1. Group statistics by the 'industries' vector created earlier
-eda_summary <- data_complete |> 
-    group_by(industry_name) |> 
-    summarise(
-        avg_return = mean(return, na.rm = TRUE),
-        volatility = sd(return, na.rm = TRUE),
-        num_stocks = n_distinct(stock_id)
-    )
-eda_summary
+# 2. Create the Yearly Boxplot for 2 industries per plot
+data_complete_group <- data_complete %>%
+  mutate(industry_name = factor(industry_name, levels = industry_order)) |> 
+  mutate(plot_group = as.numeric(factor(industry_name)),
+         plot_group = ceiling(plot_group / 2))
 
-# 2. Create the Yearly Boxplot
 # We facet by industry_name to see the movement of each sector clearly
-ggplot(data_complete, aes(x = year, y = return, fill = industry_name)) +
-  geom_boxplot(outlier.size = 0.5, alpha = 0.7) +
-  facet_wrap(~industry_name, scales = "free_y") + 
+data_complete_group |> 
+  filter(plot_group == 1) |> 
+  ggplot(aes(x = factor(year), y = return, fill = industry_name)) +
+  geom_boxplot(outlier.size = 0.5, 
+                alpha = 0.7,
+                width = 0.7,
+                median.linewidth = 1) +
+  facet_wrap(~industry_name, 
+              scales = "free_y",
+              nrow = 2, 
+              labeller = label_wrap_gen(width = 20)) + 
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray50", alpha = 0.5) +
   theme_minimal() +
   labs(
     title = "Industry Return Distributions: 2005 - 2019",
@@ -122,9 +158,111 @@ ggplot(data_complete, aes(x = year, y = return, fill = industry_name)) +
     y = "Monthly Return (%)"
   ) +
   theme(
+    # Reduce x-axis clutter: only show every 3rd year
     axis.text.x = element_text(angle = 45, hjust = 1, size = 8),
+    strip.text = element_text(face = "bold", size = 10),
+    panel.spacing = unit(2, "lines"),
     legend.position = "none"
-  )
+  ) +
+    scale_x_discrete(breaks = seq(2005, 2019, by = 2))
+
+data_complete_group |> 
+  filter(plot_group == 2) |> 
+  ggplot(aes(x = factor(year), y = return, fill = industry_name)) +
+  geom_boxplot(outlier.size = 0.5, 
+                alpha = 0.7,
+                width = 0.7,
+                median.linewidth = 1) +
+  facet_wrap(~industry_name, 
+              scales = "free_y",
+              nrow = 2, 
+              labeller = label_wrap_gen(width = 20)) + 
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray50", alpha = 0.5) +
+  theme_minimal() +
+  labs(
+    x = "Year",
+    y = "Monthly Return (%)"
+  ) +
+  theme(
+    # Reduce x-axis clutter: only show every 3rd year
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 8),
+    strip.text = element_text(face = "bold", size = 10),
+    panel.spacing = unit(2, "lines"),
+    legend.position = "none"
+  ) +
+    scale_x_discrete(breaks = seq(2005, 2019, by = 2))
+
+data_complete_group |> 
+  filter(plot_group == 3) |> 
+  ggplot(aes(x = factor(year), y = return, fill = industry_name)) +
+  geom_boxplot(outlier.size = 0.5, 
+                alpha = 0.7,
+                width = 0.7,
+                median.linewidth = 1) +
+  facet_wrap(~industry_name, 
+              scales = "free_y",
+              nrow = 2, 
+              labeller = label_wrap_gen(width = 20)) + 
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray50", alpha = 0.5) +
+  theme_minimal() +
+  labs(
+    x = "Year",
+    y = "Monthly Return (%)"
+  ) +
+  theme(
+    # Reduce x-axis clutter: only show every 3rd year
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 8),
+    strip.text = element_text(face = "bold", size = 10),
+    panel.spacing = unit(2, "lines"),
+    legend.position = "none"
+  ) +
+    scale_x_discrete(breaks = seq(2005, 2019, by = 2))
+
+data_complete_group |> 
+  filter(plot_group == 4) |> 
+  ggplot(aes(x = factor(year), y = return, fill = industry_name)) +
+  geom_boxplot(outlier.size = 0.5, 
+                alpha = 0.7,
+                width = 0.7,
+                median.linewidth = 1) +
+  facet_wrap(~industry_name, 
+              scales = "free_y",
+              nrow = 2, 
+              labeller = label_wrap_gen(width = 20)) + 
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray50", alpha = 0.5) +
+  theme_minimal() +
+  labs(
+    x = "Year",
+    y = "Monthly Return (%)"
+  ) +
+  theme(
+    # Reduce x-axis clutter: only show every 3rd year
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 8),
+    strip.text = element_text(face = "bold", size = 10),
+    panel.spacing = unit(2, "lines"),
+    legend.position = "none"
+  ) +
+    scale_x_discrete(breaks = seq(2005, 2019, by = 2))
+```
+
+As shown from the boxplots, we can see the industry return distributions from 2005 to 2019 reveal several key trends in market stability and sector performance:
+
+- **Volatility Cluster from 2008 to 2009**: During this time, all industries saw a big rise in volatility. We can see this in the taller boxes (wider interquartile ranges) and the extreme outliers, especially in Wholesale Trade, Services, and Finance.
+
+- **Performance by sector**: Manufacturing and wholesale trade were still the best performers, with high average returns. However, manufacturing had more positive outliers over the decade.
+
+- **Stability vs. Risk**: Finance, Insurance, and Real Estate had the most stable distributions (lowest volatility), while Mining and Services had much bigger swings from year to year.
+
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+#| echo: false
+#| label: Exploratory Data Analysis 3
+#| fig-cap: Industry Correlations Heatmap
+#| fig-width: 7
+#| fig-height: 4
+#| fig-pos: H
 
 # 3. Calculate Average Monthly Returns per Industry (time series) for correlation analysis
 industry_ts <- data_complete |>
@@ -144,23 +282,24 @@ ind_cor_long <- industry_ts |>
 
 # 5. Use heatmap to visualise
 ggplot(ind_cor_long, aes(Var1, Var2, fill = Freq)) +
-  geom_tile() +
-  # Add the numbers on top
-  geom_text(aes(label = round(Freq, 2)), color = "black", size = 5) +
-  # Use a standard diverging color scale
-  scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0, limit = c(-1,1)) +
+  geom_tile(color = "white") +
+  geom_text(aes(label = round(Freq, 2)), 
+            color = ifelse(abs(ind_cor_long$Freq) > 0.7,"white", "black"), size = 2.5) +
+  scale_fill_gradient2(low = "#3B4CC0", high = "#B40427", mid = "white", 
+                       midpoint = 0, limit = c(-1,1), name="Correlation") +
+  coord_fixed() +
   theme_minimal() +
-  labs(title = "Industry Correlations", x = "", y = "", fill = "Corr") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  labs(title = "Industry Correlations Heatmap", x = NULL, y = NULL) +
+  scale_x_discrete(labels = function(x) str_trunc(x, 15)) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+        panel.grid.major = element_blank(), # Remove background grid
+        legend.position = "right"
+  )
 ```
 
 Preliminary correlation analysis indicates significant systemic integration between industries. For instance, the correlation coefficient between sectors Transportation and Public Utilities (E) and Finance, Insurance and Real Estate (H) is 0.80, highlighting a shared sensitivity to market conditions. Given this high dimensionality and strong inter-variable relationship, PCA is an appropriate methodology for isolating the primary component that parallel with broad market movements.
 
 # PCA Preparation (100 words)
-
-- Selection of stocks return variables
-- Data standardisation
-- PCA implementation
 
 The selection of variables for PCA is limited to the 83 monthly stock return columns, as including the date or benchmark factors would bias the mathematical extraction of common variation. Since these stocks belong to diverse sectors with varying levels of price volatility, standardisation is a must. Without scaling, stocks with the highest return variance would disproportionately influence the principal components, regardless of their actual contribution to market-wide trends. By centering and scaling the data, we ensure each company contributes equally to the analysis. The PCA is then implemented on this standardised matrix to transform the correlated returns into a set of linearly uncorrelated principal components.
 
@@ -184,11 +323,6 @@ pca_res <- prcomp(pca_input, scale. = TRUE)
 
 ## Q1 Does the largest principal component coincide with market returns?
 
-- Scree plot and component selection
-- Variance explained by principal components
-- Comparison of PC1 with Market Return
-- Interpretation of PC1 as a market factor
-
 To determine the number of components representing meaningful signals, we generate a Scree Plot. In high-dimensional financial data, we typically observe a sharp elbow after the first component, which indicates that one dominant latent factor is responsible for the majority of the co-movement across all companies.
 
 ```{r}
@@ -197,13 +331,17 @@ To determine the number of components representing meaningful signals, we genera
 #| warning: false
 #| echo: false
 #| label: Scree Plot and Variance Analysis
+#| fig-cap: Scree Plot of Stock Returns
+#| fig-width: 7
+#| fig-height: 4
+#| fig-pos: H
 
 # 1. Visualize Eigenvalues
 screeplot(pca_res, type = "lines", main = "Scree Plot of Stock Returns")
 abline(h = 1, col="red", lty=2) # Kaiser Criterion threshold
 
 # 2. Calculate Variance Explained
-summary(pca_res)$importance[, 1:5]
+kable(summary(pca_res)$importance[, 1:5])
 ```
 
 The Variance Explained by the first principal component (PC1) is a critical measure of systematic risk. If PC1 accounts for a large percentage (e.g., \>30%) of the total variation in an 83-stock universe, it suggests a powerful common driver.
@@ -351,10 +489,6 @@ Overall, while all industries move in the same direction as the common factor, t
 
 ## Q4 Which industry has the highest systematic risk?
 
-- Measurement of systematic risk using factor loadings
-- Comparison of absolute loadings across industries
-- Identification of high-risk industries
-
 ```{r}
 #| echo: false
 #| message: false
@@ -415,10 +549,6 @@ While Construction also has a relatively high PC1 variance share, at 0.322, but 
 
 ## Q5 Which industry is counter-cyclical for hedging purposes?
 
-- Identification of negative or weak loadings
-- Industry behaviour relative to market factor
-- Hedging implications
-
 ```{r}
 #| label: tbl-q5-hedging
 #| tbl-cap: Industry exposure to PC1 for hedging assessment
@@ -458,9 +588,23 @@ No industry in this sample as shown @tbl-q5-hedging is truly counter-cyclical be
 
 # Conclusion (150 words)
 
-- Summary of key findings
-- Direct answers to Q1 - Q5
-- Implications for investment decisions
+Based on the high-dimensional analysis of NYSE stock returns from 2005 to 2019, the study concludes that **a single dominant latent factor drives common market variation**.
+
+**Key Findings and Direct Answers**
+
+**Q1:** Market Coincidence: The first principal component (PC1) is a robust proxy for the market, showing a 0.9657 correlation with broad market returns.
+
+**Q2:** Fama-French Model: While PC1 captures overall movement, SMB and HML factors explain only a smaller portion of variation, providing only partial support for the three-factor model.
+
+**Q3:** Industry Direction: All analyzed industries move in the same direction as the common factor, confirmed by universally positive PC1 loadings.
+
+**Q4:** Systematic Risk: Finance, Insurance and Real Estate carries the highest systematic risk, with the highest PC1 correlation (0.571) and variance share (0.382).
+
+**Q5:** Hedging: No industry is truly counter-cyclical; however, Services is the most defensive option due to its minimal market exposure.
+
+**Investment Implications**
+
+Investors should recognize that diversification across these industries does not eliminate systematic risk, as all sectors remain positively correlated with the market. For hedging, the Services sector provides the best relative protection. Conversely, the Finance sector requires careful monitoring during macroeconomic shifts due to its high sensitivity to latent market forces.
 
 # Reference
 
@@ -468,11 +612,317 @@ No industry in this sample as shown @tbl-q5-hedging is truly counter-cyclical be
 
 ## Data and Preparation Code
 
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+#| echo: true
+#| eval: false
+
+# 1. Load Libraries
+library(tidyverse)
+library(janitor)
+library(psych)
+library(knitr)
+library(stringr)
+library(scales)
+
+# 2. Load Data
+stocks <- read_csv("SampleH.csv")
+market_factors <- read_csv("MarketFactors.csv")
+
+# 3. Define the mapping of letters to Industry Names
+industry_lookup <- c(
+  "B" = "Mining",
+  "C" = "Construction",
+  "D" = "Manufacturing",
+  "E" = "Transportation and Public Utilities",
+  "F" = "Wholesale Trade",
+  "G" = "Retail Trade",
+  "H" = "Finance, Insurance and Real Estate",
+  "I" = "Services"
+  )
+
+# 4. Transform and Merge Data
+# We pivot the stocks to a 'long' format so each row is a unique Stock-Date observation
+data_complete <- stocks |> 
+    pivot_longer(
+        # Keep Date as is
+        cols = -Date,
+        # New column for stock codes
+        names_to = "stock_id",
+        # new column for the return values
+        values_to = "return"
+        ) |> 
+        mutate(industry_letter = substr(stock_id, 1, 1)) |> 
+        mutate(industry_name = industry_lookup[industry_letter]) |>
+        inner_join(market_factors, by = "Date") |>
+        mutate(year = substr(Date, 2, 5)) |> 
+        # Reorder: put `Return` column after `industry_name`
+        relocate(return, .after = industry_name) |> 
+        relocate(year, .before = Date) |> 
+        # clean names
+        clean_names()
+
+kable(head(data_complete))
+
+# 5. Check dimensions and missing values
+explain_dim <- function(df) {
+  dimensions <- dim(df)
+  cat("The dataset '", substitute(df), "' contains:\n", sep = "")
+  cat("- ", dimensions[1], " observations (rows)\n", sep = "")
+  cat("- ", dimensions[2], " variables (columns)\n", sep = "")
+}
+explain_dim(data_complete)
+cat("Total amoun of NA entries:", sum(is.na(data_complete)))
+
+```
+
 ## Preliminary Analysis Code
+
+Table group statistics by the 'industries'
+
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+#| echo: true
+#| eval: false
+
+# 1. Group statistics by the 'industries' vector created earlier
+eda_summary <- data_complete |> 
+    group_by(industry_name) |> 
+    summarise(
+        avg_return_monthly = label_percent(accuracy = 0.01)(mean(return, na.rm = TRUE)),
+        volatility = label_percent(accuracy = 0.01)(sd(return, na.rm = TRUE)),
+        num_stocks = n_distinct(stock_id)
+    ) |> 
+      arrange(desc(avg_return_monthly))
+kable(eda_summary)
+
+# create the ordered vector
+industry_order <- eda_summary$industry_name
+```
+
+Time-series boxplots
+
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+#| echo: true
+#| eval: false
+
+# 2. Create the Yearly Boxplot for 2 industries per plot
+data_complete_group <- data_complete %>%
+  mutate(industry_name = factor(industry_name, levels = industry_order)) |> 
+  mutate(plot_group = as.numeric(factor(industry_name)),
+         plot_group = ceiling(plot_group / 2))
+
+# We facet by industry_name to see the movement of each sector clearly
+data_complete_group |> 
+  filter(plot_group == 1) |> 
+  ggplot(aes(x = factor(year), y = return, fill = industry_name)) +
+  geom_boxplot(outlier.size = 0.5, 
+                alpha = 0.7,
+                width = 0.7,
+                median.linewidth = 1) +
+  facet_wrap(~industry_name, 
+              scales = "free_y",
+              nrow = 2, 
+              labeller = label_wrap_gen(width = 20)) + 
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray50", alpha = 0.5) +
+  theme_minimal() +
+  labs(
+    title = "Industry Return Distributions: 2005 - 2019",
+    subtitle = "Boxplots show median, quartiles, and volatility shifts per year",
+    x = "Year",
+    y = "Monthly Return (%)"
+  ) +
+  theme(
+    # Reduce x-axis clutter: only show every 3rd year
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 8),
+    strip.text = element_text(face = "bold", size = 10),
+    panel.spacing = unit(2, "lines"),
+    legend.position = "none"
+  ) +
+    scale_x_discrete(breaks = seq(2005, 2019, by = 2))
+
+data_complete_group |> 
+  filter(plot_group == 2) |> 
+  ggplot(aes(x = factor(year), y = return, fill = industry_name)) +
+  geom_boxplot(outlier.size = 0.5, 
+                alpha = 0.7,
+                width = 0.7,
+                median.linewidth = 1) +
+  facet_wrap(~industry_name, 
+              scales = "free_y",
+              nrow = 2, 
+              labeller = label_wrap_gen(width = 20)) + 
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray50", alpha = 0.5) +
+  theme_minimal() +
+  labs(
+    x = "Year",
+    y = "Monthly Return (%)"
+  ) +
+  theme(
+    # Reduce x-axis clutter: only show every 3rd year
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 8),
+    strip.text = element_text(face = "bold", size = 10),
+    panel.spacing = unit(2, "lines"),
+    legend.position = "none"
+  ) +
+    scale_x_discrete(breaks = seq(2005, 2019, by = 2))
+
+data_complete_group |> 
+  filter(plot_group == 3) |> 
+  ggplot(aes(x = factor(year), y = return, fill = industry_name)) +
+  geom_boxplot(outlier.size = 0.5, 
+                alpha = 0.7,
+                width = 0.7,
+                median.linewidth = 1) +
+  facet_wrap(~industry_name, 
+              scales = "free_y",
+              nrow = 2, 
+              labeller = label_wrap_gen(width = 20)) + 
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray50", alpha = 0.5) +
+  theme_minimal() +
+  labs(
+    x = "Year",
+    y = "Monthly Return (%)"
+  ) +
+  theme(
+    # Reduce x-axis clutter: only show every 3rd year
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 8),
+    strip.text = element_text(face = "bold", size = 10),
+    panel.spacing = unit(2, "lines"),
+    legend.position = "none"
+  ) +
+    scale_x_discrete(breaks = seq(2005, 2019, by = 2))
+
+data_complete_group |> 
+  filter(plot_group == 4) |> 
+  ggplot(aes(x = factor(year), y = return, fill = industry_name)) +
+  geom_boxplot(outlier.size = 0.5, 
+                alpha = 0.7,
+                width = 0.7,
+                median.linewidth = 1) +
+  facet_wrap(~industry_name, 
+              scales = "free_y",
+              nrow = 2, 
+              labeller = label_wrap_gen(width = 20)) + 
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray50", alpha = 0.5) +
+  theme_minimal() +
+  labs(
+    x = "Year",
+    y = "Monthly Return (%)"
+  ) +
+  theme(
+    # Reduce x-axis clutter: only show every 3rd year
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 8),
+    strip.text = element_text(face = "bold", size = 10),
+    panel.spacing = unit(2, "lines"),
+    legend.position = "none"
+  ) +
+    scale_x_discrete(breaks = seq(2005, 2019, by = 2))
+```
+
+Heatmap plot
+
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+#| echo: true
+#| eval: false
+
+# 3. Calculate Average Monthly Returns per Industry (time series) for correlation analysis
+industry_ts <- data_complete |>
+    # Group by Industry and Date
+    group_by(industry_name, date) |>
+    # Calculate the average return for the each industry classification for that month
+    summarise(avg_return = mean(return, na.rm = TRUE), .groups = "drop") |>
+    # Pivot so each industry gets its own column
+    pivot_wider(names_from = industry_name, values_from = avg_return)
+
+# 4. Create Correlation Matrix between Industry Averages
+ind_cor_long <- industry_ts |>
+    select(-date) |> 
+    cor(use = "complete.obs") |> 
+    as.table() |> 
+    as.data.frame()
+
+# 5. Use heatmap to visualise
+ggplot(ind_cor_long, aes(Var1, Var2, fill = Freq)) +
+  geom_tile(color = "white") +
+  geom_text(aes(label = round(Freq, 2)), 
+            color = ifelse(abs(ind_cor_long$Freq) > 0.7,"white", "black"), size = 2.5) +
+  scale_fill_gradient2(low = "#3B4CC0", high = "#B40427", mid = "white", 
+                       midpoint = 0, limit = c(-1,1), name="Correlation") +
+  coord_fixed() +
+  theme_minimal() +
+  labs(title = "Industry Correlations Heatmap", x = NULL, y = NULL) +
+  scale_x_discrete(labels = function(x) str_trunc(x, 15)) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+        panel.grid.major = element_blank(), # Remove background grid
+        legend.position = "right"
+  )
+```
 
 ## PCA Preparation Code
 
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+#| echo: true
+#| eval: false
+
+# 1. Select only stock return columns (numeric variables)
+# We exclude 'date' and the Fama-French factors
+pca_input <- stocks |> select(-Date)
+
+# 2. Standardise and Run PCA
+# 'scale. = TRUE' ensures data is standardised (mean=0, sd=1)
+pca_res <- prcomp(pca_input, scale. = TRUE)
+```
+
 ## Q1 Code
+
+Scree Plot
+
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+#| echo: true
+#| eval: false
+
+# 1. Visualize Eigenvalues
+screeplot(pca_res, type = "lines", main = "Scree Plot of Stock Returns")
+abline(h = 1, col="red", lty=2) # Kaiser Criterion threshold
+
+# 2. Calculate Variance Explained
+kable(summary(pca_res)$importance[, 1:5])
+```
+
+Comparison PC1 with Market Return
+
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+#| echo: true
+#| eval: false
+
+# 1. Extract PC1 scores
+pc1_scores <- pca_res$x[, 1]
+
+# 2. Correlate with Market Return
+market_test_corr <- cor(pc1_scores, market_factors$MarketReturn)
+
+cat("Correlation between PC1 and Market Return:", round(market_test_corr, 4))
+```
 
 ## Q2 Code
 
