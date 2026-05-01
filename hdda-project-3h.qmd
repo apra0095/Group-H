@@ -419,6 +419,43 @@ While Construction also has a relatively high PC1 variance share, at 0.322, but 
 - Industry behaviour relative to market factor
 - Hedging implications
 
+```{r}
+#| label: tbl-q5-hedging
+#| tbl-cap: Industry exposure to PC1 for hedging assessment
+#| echo: false
+#| message: false
+#| warning: false
+
+q5_hedging <- stock_pc1 %>%
+  group_by(industry_name) %>%
+  summarise(
+    n_stocks = n(),
+    mean_pc1_corr = mean(pc1_corr, na.rm = TRUE),
+    mean_pc1_variance_share = mean(pc1_variance_share, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  arrange(mean_pc1_corr) %>%
+  mutate(
+    signal = case_when(
+      mean_pc1_corr < 0 ~ "Counter-cyclical",
+      mean_pc1_corr < 0.40 ~ "Weak positive exposure",
+      TRUE ~ "Positive exposure"
+    )
+  ) %>%
+  mutate(across(-c(industry_name, n_stocks, signal), ~ round(.x, 3))) |>
+  rename(
+    Industry = industry_name,
+    `No of stocks` = n_stocks,
+    `Mean PC1 correlation` = mean_pc1_corr,
+    `Mean PC1 variance share` = mean_pc1_variance_share,
+    `Signal` = signal
+  )
+
+kable(q5_hedging)
+```
+
+No industry in this sample as shown @tbl-q5-hedging is truly counter-cyclical because all industries have positive average PC1 correlations. This means they still tend to move in the same direction as the market wide factor. However, Services is the most defensive option because it has the lowest average PC1 correlation (0.317) and the lowest average PC1 variance share (0.111). This suggests that Services is the least exposed to broad market movements, although it should not be treated as a true hedge that moves opposite to the market.
+
 # Conclusion (150 words)
 
 - Summary of key findings
@@ -526,4 +563,86 @@ pc1_loadings |>
 
 ## Q4 Code
 
+Industry risk based on PC1
+
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+#| echo: true
+#| eval: false
+
+pc1_sign <- ifelse(
+  cor(pca_res$x[, 1], market_factors$MarketReturn, use = "complete.obs") < 0,
+  -1,
+  1
+)
+
+# Stock exposure to PC1
+stock_pc1 <- tibble(
+  stock_id = colnames(pca_input),
+  industry_letter = substr(stock_id, 1, 1),
+  industry_name = as.character(industry_lookup[industry_letter]),
+  pc1_loading = pc1_sign * pca_res$rotation[, 1],
+  pc1_corr = pc1_loading * pca_res$sdev[1],
+  pc1_variance_share = pc1_corr^2
+)
+
+q4_industry_risk <- stock_pc1 |>
+  group_by(industry_name) |>
+  summarise(
+    n_stocks = n(),
+    mean_pc1_corr = mean(pc1_corr, na.rm = TRUE),
+    mean_pc1_variance_share = mean(pc1_variance_share, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  arrange(desc(mean_pc1_variance_share)) |>
+  mutate(across(-c(industry_name, n_stocks), ~ round(.x, 3))) |>
+  rename(
+    Industry = industry_name,
+    `No of stocks` = n_stocks,
+    `Mean PC1 correlation` = mean_pc1_corr,
+    `Mean PC1 variance share` = mean_pc1_variance_share
+  )
+
+kable(q4_industry_risk)
+```
+
 ## Q5 Code
+
+Industry exposure to PC1
+
+```{r}
+#| code-fold: true
+#| message: false
+#| warning: false
+#| echo: true
+#| eval: false
+
+q5_hedging <- stock_pc1 %>%
+  group_by(industry_name) %>%
+  summarise(
+    n_stocks = n(),
+    mean_pc1_corr = mean(pc1_corr, na.rm = TRUE),
+    mean_pc1_variance_share = mean(pc1_variance_share, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  arrange(mean_pc1_corr) %>%
+  mutate(
+    signal = case_when(
+      mean_pc1_corr < 0 ~ "Counter-cyclical",
+      mean_pc1_corr < 0.40 ~ "Weak positive exposure",
+      TRUE ~ "Positive exposure"
+    )
+  ) %>%
+  mutate(across(-c(industry_name, n_stocks, signal), ~ round(.x, 3))) |>
+  rename(
+    Industry = industry_name,
+    `No of stocks` = n_stocks,
+    `Mean PC1 correlation` = mean_pc1_corr,
+    `Mean PC1 variance share` = mean_pc1_variance_share,
+    `Signal` = signal
+  )
+
+kable(q5_hedging)
+```
