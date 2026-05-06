@@ -1,11 +1,15 @@
 ---
 title: "High-Dimensional Data Analysis Project"
 author: "Group 3H"
-date: "April  , 2026"
-format: 
-    pdf:
-        toc: true
-editor: visual
+date: "May  8, 2026"
+format:
+  pdf:
+    toc: true
+    number-sections: true
+    colorlinks: true
+    linkcolor: blue
+    urlcolor: black
+    toccolor: black
 ---
 
 # Introduction (120 words)
