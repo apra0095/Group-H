@@ -136,7 +136,7 @@ The table above summarises the performance and risk of eight industry sectors ba
 #| label: Exploratory Data Analysis 2
 
 # 2. Create the Yearly Boxplot for 2 industries per plot
-data_complete_group <- data_complete %>%
+data_complete_group <- data_complete|>
   mutate(industry_name = factor(industry_name, levels = industry_order)) |> 
   mutate(plot_group = as.numeric(factor(industry_name)),
          plot_group = ceiling(plot_group / 2))
@@ -560,22 +560,22 @@ While Construction also has a relatively high PC1 variance share, at 0.322, but 
 #| message: false
 #| warning: false
 
-q5_hedging <- stock_pc1 %>%
-  group_by(industry_name) %>%
+q5_hedging <- stock_pc1|>
+  group_by(industry_name)|>
   summarise(
     n_stocks = n(),
     mean_pc1_corr = mean(pc1_corr, na.rm = TRUE),
     mean_pc1_variance_share = mean(pc1_variance_share, na.rm = TRUE),
     .groups = "drop"
   ) |>
-  arrange(mean_pc1_corr) %>%
+  arrange(mean_pc1_corr)|>
   mutate(
     signal = case_when(
       mean_pc1_corr < 0 ~ "Counter-cyclical",
       mean_pc1_corr < 0.40 ~ "Weak positive exposure",
       TRUE ~ "Positive exposure"
     )
-  ) %>%
+  )|>
   mutate(across(-c(industry_name, n_stocks, signal), ~ round(.x, 3))) |>
   rename(
     Industry = industry_name,
@@ -718,7 +718,7 @@ Time-series boxplots
 #| eval: false
 
 # 2. Create the Yearly Boxplot for 2 industries per plot
-data_complete_group <- data_complete %>%
+data_complete_group <- data_complete|>
   mutate(industry_name = factor(industry_name, levels = industry_order)) |> 
   mutate(plot_group = as.numeric(factor(industry_name)),
          plot_group = ceiling(plot_group / 2))
@@ -1073,22 +1073,22 @@ Industry exposure to PC1
 #| echo: true
 #| eval: false
 
-q5_hedging <- stock_pc1 %>%
-  group_by(industry_name) %>%
+q5_hedging <- stock_pc1|>
+  group_by(industry_name)|>
   summarise(
     n_stocks = n(),
     mean_pc1_corr = mean(pc1_corr, na.rm = TRUE),
     mean_pc1_variance_share = mean(pc1_variance_share, na.rm = TRUE),
     .groups = "drop"
   ) |>
-  arrange(mean_pc1_corr) %>%
+  arrange(mean_pc1_corr)|>
   mutate(
     signal = case_when(
       mean_pc1_corr < 0 ~ "Counter-cyclical",
       mean_pc1_corr < 0.40 ~ "Weak positive exposure",
       TRUE ~ "Positive exposure"
     )
-  ) %>%
+  )|>
   mutate(across(-c(industry_name, n_stocks, signal), ~ round(.x, 3))) |>
   rename(
     Industry = industry_name,
