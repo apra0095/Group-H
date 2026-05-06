@@ -14,9 +14,9 @@ format:
 
 # Introduction
 
-The analysis of stock returns is important in finance because it helps explain the relationship between risk and return. This report analyses monthly returns of New York Stock Exchange (NYSE) companies from 2005 to 2019 using high-dimensional data techniques. The study separates stock returns into systematic risk driven by overall market movements and idiosyncratic risk specific to individual firms or industries.
+The analysis of stock returns is important in finance because it helps explain the relationship between risk and return. This report analyses monthly returns of New York Stock Exchange (NYSE) from 83 companies from 2005 to 2019 (over 180 months) using high-dimensional data techniques. The study separates stock returns into systematic risk driven by overall market movements and idiosyncratic risk specific to individual firms or industries.
 
-The objective is to investigate whether latent factors correspond to observable market benchmarks such as Market Return, SMB, and HML. Specifically, the report examines whether the first principal component represents the market, whether the Fama-French three-factor model explains common variation, which industries are most exposed to common factors, and whether any industry provides defensive or hedging characteristics.
+The objective is to investigate whether latent factors correspond to observable market benchmarks Specifically, the report examines whether the first principal component represents the market, whether the Fama-French three-factor model explains common variation, which industries are most exposed to common factors, and whether any industry provides defensive or hedging characteristics.
 
 # Data and Preparation
 
@@ -100,9 +100,9 @@ kable(
 
 ```
 
-The final dataset contains 14,940 observations across 9 variables with no missing values. The data cover 83 NYSE stocks observed monthly over 180 months from January 2005 to December 2019. Industry classifications include Mining (B), Construction (C), Manufacturing (D), Transportation and Public Utilities (E), Wholesale Trade (F), Retail Trade (G), Finance, Insurance and Real Estate (H), and Services (I).
+The final dataset contains 14,940 observations across 9 variables with no missing values. Industry classifications include Mining (B), Construction (C), Manufacturing (D), Transportation and Public Utilities (E), Wholesale Trade (F), Retail Trade (G), Finance, Insurance and Real Estate (H), and Services (I).
 
-Variables include stock returns together with three benchmark market factors: Market Return, SMB (Small Minus Big), and HML (High Minus Low). SMB represents the size effect between small and large firms, while HML captures the value effect based on book-to-market ratios.
+Variables include stock returns together with the Fama-French three-factor model: Market Return, SMB (Small Minus Big), and HML (High Minus Low). SMB represents the size effect between small and large firms, while HML captures the value effect based on book-to-market ratios.
 
 # Preliminary Analysis (EDA)
 
@@ -142,9 +142,9 @@ industry_order <- eda_summary$industry_name
 
 - **Top Performers**: Manufacturing leads with the highest average monthly return at 1.43%, followed closely by Wholesale Trade at 1.23%.
 
-- **Risk and Volatility**: Services is the most volatile sector (16.48%), while Finance, Insurance and Real Estate is the least volatile (7.29%).
+- **Risk and Volatility**: Services is the most volatile sector (16.48%), while Finance, Insurance and Real Estate is the least (7.29%).
 
-- **Sector Representation**: The Finance sector has the largest number of stocks in this dataset (32), whereas Construction is represented by only a single stock.
+- **Sector Representation**: The Finance sector has the largest number of stocks in this dataset (32), whereas only a single stock in Construction .
 
 ```{r}
 #| code-fold: true
@@ -220,7 +220,7 @@ As shown from the @fig-industry-distribution, we can see the industry return dis
 
 - **Performance by sector**: Manufacturing and wholesale trade were still the best performers, with high average returns. However, manufacturing had more positive outliers over the decade.
 
-- **Stability vs. Risk**: Finance, Insurance, and Real Estate had the most stable distributions (lowest volatility), while Mining and Services had much bigger swings from year to year.
+- **Stability vs. Risk**: Finance, Insurance, and Real Estate had the most stable distributions (lowest volatility), while Mining and Services had much bigger swings.
 
 ```{r}
 #| code-fold: true
@@ -266,11 +266,11 @@ ggplot(ind_cor_long, aes(Var1, Var2, fill = Freq)) +
   )
 ```
 
-@fig-industry-cor shows preliminary correlation analysis indicates significant systemic integration between industries. For instance, the correlation coefficient between sectors Transportation and Public Utilities (E) and Finance, Insurance and Real Estate (H) is 0.80, highlighting a shared sensitivity to market conditions. Given this high dimensionality and strong inter-variable relationship, PCA is an appropriate methodology for isolating the primary component that parallel with broad market movements.
+@fig-industry-cor shows preliminary correlation analysis indicates significant systemic integration between industries. For instance, the correlation coefficient between sectors Transportation and Public Utilities (E) and Finance (H) is 0.80, highlighting a shared sensitivity to market conditions. Given this high dimensionality and strong inter-variable relationship, PCA is an appropriate methodology for isolating the primary component that parallel with market movements.
 
 # PCA Preparation
 
-The selection of variables for PCA is limited to the 83 monthly stock return columns, as including the date or benchmark factors would bias the mathematical extraction of common variation. Since these stocks belong to diverse sectors with varying levels of price volatility, standardisation is a must. Without scaling, stocks with the highest return variance would disproportionately influence the principal components, regardless of their actual contribution to market-wide trends. By centering and scaling the data, we ensure each company contributes equally to the analysis. The PCA is then implemented on this standardised matrix to transform the correlated returns into a set of linearly uncorrelated principal components.
+The selection of variables for PCA is limited to the 83 monthly stock return columns, as including the date or benchmark factors would bias the mathematical extraction of common variation. Since these stocks belong to diverse sectors with varying levels of price volatility, standardisation is a must. Without scaling, stocks with the highest return variance would disproportionately influence the principal components (PC), regardless of their actual contribution to market-wide trends. By centering and scaling, we ensure each company contributes equally to the analysis. The PCA is then implemented on this standardised matrix to transform the correlated returns into a set of linearly uncorrelated PC.
 
 ```{r}
 #| code-fold: true
