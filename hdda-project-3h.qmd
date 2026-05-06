@@ -408,6 +408,59 @@ As shown in @tbl-q2-cor, PC1 has a very strong positive relationship with Market
 
 These results show that Market Return explains most of the variation in stock returns, while SMB and HML only explain a smaller part. This means the Fama-French three-factor model is only partially supported and does not fully explain the patterns found in the data.
 
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+factor_res <- factanal(
+  x = pca_input,
+  factors = 3,
+  scores = "regression",
+  rotation = "none",
+  lower = 0.05
+)
+```
+
+```{r}
+#| label: tbl-factor-market-cor
+#| tbl-cap: Correlation between latent factor scores and market factors
+#| echo: false
+#| message: false
+#| warning: false
+
+factor_scores <- as_tibble(factor_res$scores) |>
+  set_names(paste0("Factor", 1:3)) |>
+  mutate(Date = stocks$Date)
+
+# Factor signs are arbitrary, just like PCA signs.
+# This aligns Factor 1 so positive values mean movement with Market Return.
+factor1_sign <- ifelse(
+  cor(factor_scores$Factor1, market_factors$MarketReturn, use = "complete.obs") < 0,
+  -1,
+  1
+)
+
+factor_scores <- factor_scores |>
+  mutate(Factor1 = factor1_sign * Factor1)
+
+factor_market_cor <- factor_scores |>
+  inner_join(market_factors, by = "Date") |>
+  select(Factor1, Factor2, Factor3, MarketReturn, SMB, HML) |>
+  cor(use = "complete.obs") |>
+  as.data.frame() |>
+  rownames_to_column("factor") |>
+  filter(factor %in% c("Factor1", "Factor2", "Factor3")) |>
+  select(factor, MarketReturn, SMB, HML) |>
+  mutate(across(where(is.numeric), ~ round(.x, 4))) |>
+  rename(
+    `Latent factor` = factor
+  )
+
+kable(factor_market_cor)
+```
+
+Furthermore @tbl-factor-market-cor gives us further check using the latent factor model. The result is consistent with @tbl-q2-cor because Factor 1 is also very strongly related to Market Return, with a correlation of 0.9865. This confirms that the main hidden pattern in the stock returns is the broad market movement. The other factors are less related to Market Return, but Factor 2 and Factor 3 have moderate relationships with HML, suggesting that value related effects may explain some of the remaining common variation. Overall, both PCA and the latent factor model show the same message, market Return explains the dominant common movement, while SMB and HML only explain smaller secondary patterns.
+
 ## Q3 Which industries move in the same direction as the common factors?
 
 ```{r}
