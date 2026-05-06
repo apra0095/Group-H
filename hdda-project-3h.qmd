@@ -1,7 +1,7 @@
 ---
 title: "High-Dimensional Data Analysis Project"
-author: "Group 3H"
-date: "May  8, 2026"
+author: "Group 3H (Bagas Ari Wibawanto, Izzul Fattah Aji Pratama, Yusuf Romadhon)"
+date: "May  6, 2026"
 format:
   pdf:
     toc: true
@@ -214,9 +214,9 @@ data_complete |>
   )
 ```
 
-As shown from the @fig-industry-distribution, we can see the industry return distributions from 2005 to 2019 reveal several key trends in market stability and sector performance:
+As shown from the @fig-industry-distribution, the industry return distributions from 2005 to 2019 reveal several key trends in market stability and sector performance:
 
-- **Volatility Cluster from 2008 to 2009**: During this time, all industries saw a big rise in volatility. We can see this in the taller boxes (wider interquartile ranges) and the extreme outliers, especially in Wholesale Trade, Services, and Finance.
+- **Volatility Cluster from 2008 to 2009**: During this time, all industries saw a big rise in volatility, this in the taller boxes (wider interquartile ranges) and the extreme outliers, especially in Wholesale Trade, Services, and Finance.
 
 - **Performance by sector**: Manufacturing and wholesale trade were still the best performers, with high average returns. However, manufacturing had more positive outliers over the decade.
 
@@ -266,11 +266,11 @@ ggplot(ind_cor_long, aes(Var1, Var2, fill = Freq)) +
   )
 ```
 
-@fig-industry-cor shows preliminary correlation analysis indicates significant systemic integration between industries. For instance, the correlation coefficient between sectors Transportation and Public Utilities (E) and Finance (H) is 0.80, highlighting a shared sensitivity to market conditions. Given this high dimensionality and strong inter-variable relationship, PCA is an appropriate methodology for isolating the primary component that parallel with market movements.
+@fig-industry-cor shows preliminary correlation analysis indicates significance systemic integration between industries. For instance, the correlation coefficient between Transportation and Public Utilities (E) and Finance (H) is 0.80, highlighting a shared sensitivity to market. Given this high dimensionality and strong inter-variable relationship, PCA is an appropriate methodology for isolating the primary component that parallel with market movements.
 
 # PCA Preparation
 
-The selection of variables for PCA is limited to the 83 monthly stock return columns, as including the date or benchmark factors would bias the mathematical extraction of common variation. Since these stocks belong to diverse sectors with varying levels of price volatility, standardisation is a must. Without scaling, stocks with the highest return variance would disproportionately influence the principal components (PC), regardless of their actual contribution to market-wide trends. By centering and scaling, we ensure each company contributes equally to the analysis. The PCA is then implemented on this standardised matrix to transform the correlated returns into a set of linearly uncorrelated PC.
+PCA variables are restricted to the 83 monthly stock return columns to prevent date or benchmark factors from biasing the extraction of common variation. Since these stocks belong to diverse sectors with various volatility, standardization is essential. Without scaling, stocks with high return variance wouldn’t be proportionally dominate PCs, regardless of their true market impact. Centering and scaling ensure that all companies contribute equally. Finally, PCA is performed on this standardized matrix to transform correlated returns into linearly uncorrelated PCs.
 
 ```{r}
 #| code-fold: true
