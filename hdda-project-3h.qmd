@@ -133,121 +133,69 @@ The table above summarises the performance and risk of eight industry sectors ba
 #| message: false
 #| warning: false
 #| echo: false
-#| label: Exploratory Data Analysis 2
+#| label: fig-industry-distribution
+#| fig-cap: Distribution of monthly returns across industries from 2005 to 2019
+#| fig-width: 8
+#| fig-height: 6
+#| fig-pos: H
 
-# 2. Create the Yearly Boxplot for 2 industries per plot
-data_complete_group <- data_complete|>
-  mutate(industry_name = factor(industry_name, levels = industry_order)) |> 
-  mutate(plot_group = as.numeric(factor(industry_name)),
-         plot_group = ceiling(plot_group / 2))
-
-# We facet by industry_name to see the movement of each sector clearly
-data_complete_group |> 
-  filter(plot_group == 1) |> 
-  ggplot(aes(x = factor(year), y = return, fill = industry_name)) +
-  geom_boxplot(outlier.size = 0.5, 
-                alpha = 0.7,
-                width = 0.7,
-                median.linewidth = 1) +
-  facet_wrap(~industry_name, 
-              scales = "free_y",
-              nrow = 2, 
-              labeller = label_wrap_gen(width = 20)) + 
-  geom_hline(yintercept = 0, linetype = "dashed", color = "gray50", alpha = 0.5) +
-  theme_minimal() +
+# Create combined faceted boxplot
+data_complete |>
+  mutate(
+    industry_name = factor(
+      industry_name,
+      levels = industry_order
+    )
+  ) |>
+  ggplot(
+    aes(
+      x = factor(year),
+      y = return,
+      fill = industry_name
+    )
+  ) +
+  geom_boxplot(
+    outlier.size = 0.5,
+    alpha = 0.7,
+    width = 0.5,
+    median.linewidth = 0.8
+  ) +
+  facet_wrap(
+    ~ industry_name,
+    scales = "free_y",
+    ncol = 4,
+    labeller = label_wrap_gen(width = 20)
+  ) +
+  geom_hline(
+    yintercept = 0,
+    linetype = "dashed",
+    color = "gray50",
+    alpha = 0.5
+  ) +
+  scale_x_discrete(
+    breaks = seq(2005, 2019, by = 2)
+  ) +
   labs(
     title = "Industry Return Distributions: 2005 - 2019",
-    subtitle = "Boxplots show median, quartiles, and volatility shifts per year",
+    subtitle = "Boxplots show median, quartiles, and volatility changes across industries",
     x = "Year",
     y = "Monthly Return (%)"
   ) +
+  theme_minimal(base_size = 11) +
   theme(
-    # Reduce x-axis clutter: only show every 3rd year
-    axis.text.x = element_text(angle = 45, hjust = 1, size = 8),
-    strip.text = element_text(face = "bold", size = 10),
-    panel.spacing = unit(2, "lines"),
+    plot.title = element_text(face = "bold"),
+    strip.text = element_text(face = "bold", size = 9),
+    axis.text.x = element_text(
+      angle = 45,
+      hjust = 1,
+      size = 7
+    ),
+    axis.text.y = element_text(size = 8),
+    panel.spacing = unit(1, "lines"),
     legend.position = "none"
-  ) +
-    scale_x_discrete(breaks = seq(2005, 2019, by = 2))
-
-data_complete_group |> 
-  filter(plot_group == 2) |> 
-  ggplot(aes(x = factor(year), y = return, fill = industry_name)) +
-  geom_boxplot(outlier.size = 0.5, 
-                alpha = 0.7,
-                width = 0.7,
-                median.linewidth = 1) +
-  facet_wrap(~industry_name, 
-              scales = "free_y",
-              nrow = 2, 
-              labeller = label_wrap_gen(width = 20)) + 
-  geom_hline(yintercept = 0, linetype = "dashed", color = "gray50", alpha = 0.5) +
-  theme_minimal() +
-  labs(
-    x = "Year",
-    y = "Monthly Return (%)"
-  ) +
-  theme(
-    # Reduce x-axis clutter: only show every 3rd year
-    axis.text.x = element_text(angle = 45, hjust = 1, size = 8),
-    strip.text = element_text(face = "bold", size = 10),
-    panel.spacing = unit(2, "lines"),
-    legend.position = "none"
-  ) +
-    scale_x_discrete(breaks = seq(2005, 2019, by = 2))
-
-data_complete_group |> 
-  filter(plot_group == 3) |> 
-  ggplot(aes(x = factor(year), y = return, fill = industry_name)) +
-  geom_boxplot(outlier.size = 0.5, 
-                alpha = 0.7,
-                width = 0.7,
-                median.linewidth = 1) +
-  facet_wrap(~industry_name, 
-              scales = "free_y",
-              nrow = 2, 
-              labeller = label_wrap_gen(width = 20)) + 
-  geom_hline(yintercept = 0, linetype = "dashed", color = "gray50", alpha = 0.5) +
-  theme_minimal() +
-  labs(
-    x = "Year",
-    y = "Monthly Return (%)"
-  ) +
-  theme(
-    # Reduce x-axis clutter: only show every 3rd year
-    axis.text.x = element_text(angle = 45, hjust = 1, size = 8),
-    strip.text = element_text(face = "bold", size = 10),
-    panel.spacing = unit(2, "lines"),
-    legend.position = "none"
-  ) +
-    scale_x_discrete(breaks = seq(2005, 2019, by = 2))
-
-data_complete_group |> 
-  filter(plot_group == 4) |> 
-  ggplot(aes(x = factor(year), y = return, fill = industry_name)) +
-  geom_boxplot(outlier.size = 0.5, 
-                alpha = 0.7,
-                width = 0.7,
-                median.linewidth = 1) +
-  facet_wrap(~industry_name, 
-              scales = "free_y",
-              nrow = 2, 
-              labeller = label_wrap_gen(width = 20)) + 
-  geom_hline(yintercept = 0, linetype = "dashed", color = "gray50", alpha = 0.5) +
-  theme_minimal() +
-  labs(
-    x = "Year",
-    y = "Monthly Return (%)"
-  ) +
-  theme(
-    # Reduce x-axis clutter: only show every 3rd year
-    axis.text.x = element_text(angle = 45, hjust = 1, size = 8),
-    strip.text = element_text(face = "bold", size = 10),
-    panel.spacing = unit(2, "lines"),
-    legend.position = "none"
-  ) +
-    scale_x_discrete(breaks = seq(2005, 2019, by = 2))
+  )
 ```
+
 
 As shown from the boxplots, we can see the industry return distributions from 2005 to 2019 reveal several key trends in market stability and sector performance:
 
