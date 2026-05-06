@@ -958,10 +958,10 @@ kable(q2_cor_table)
 
 ```
 
-Table: factor correlation analysis
+Table: Factor Correlation Analysis
 
 ```{r}
-#| echo: false
+#| echo: true
 #| message: false
 #| warning: false
 #| eval: false
@@ -975,7 +975,7 @@ factor_res <- factanal(
 ```
 
 ```{r}
-#| echo: false
+#| echo: true
 #| message: false
 #| warning: false
 #| eval: false
