@@ -495,15 +495,13 @@ pc1_loadings |>
   )
 ```
 
-As shown in @tbl-q3-load and @fig-q3-box, all industries have positive PC1 loadings, indicating that they move in the same direction as the dominant common factor. This confirms that the common factor affects the entire market rather than a specific group of industries.
+As shown in @tbl-q3-load and @fig-q3-box, all industries have positive PC1 loadings, indicating that they move in the same direction as the dominant common factor. This suggests that the primary latent factor reflects broad market movement rather than industry-specific behaviour.
 
-However, the strength of this relationship differs across industries. Finance, Insurance and Real Estate have the highest average loading (0.118), followed closely by Construction (0.117) and Wholesale Trade (0.107), suggesting these industries are more sensitive to the common factor. In contrast, Services (0.065) and Mining (0.079) have lower average loadings, indicating weaker exposure.
+However, the level of exposure differs across industries. Finance, Insurance and Real Estate has the highest average loading (0.118), followed by Construction (0.117) and Wholesale Trade (0.107), indicating stronger sensitivity to the common factor. In contrast, Services (0.065) and Mining (0.079) show weaker exposure.
 
-More importantly, there is clear heterogeneity within industries. Finance, Insurance and Real Estate shows a relatively large spread (SD = 0.050 and a wide range from 0.005 to 0.199), indicating that stocks within this industry respond very differently to the common factor. Manufacturing and Mining also display noticeable variation, suggesting inconsistent behaviour across stocks. In contrast, Wholesale Trade and Retail Trade show smaller spreads, indicating more homogeneous responses.
+The results also show heterogeneity within industries. Finance, Insurance and Real Estate has the largest spread of loadings, while Manufacturing and Mining also display noticeable variation. In comparison, Wholesale Trade and Retail Trade have more consistent responses. Construction contains only one stock, so heterogeneity cannot be assessed meaningfully.
 
-The Construction industry appears as a single line in @fig-q3-box and has no variation in @tbl-q3-load because it contains only one stock. As a result, it is not meaningful to assess heterogeneity within this industry.
-
-Overall, while all industries move in the same direction as the common factor, the key result is that the degree of heterogeneity varies substantially across industries, suggesting that industry classification alone does not fully explain stock behaviour.
+Overall, industry exposure to the common factor differs substantially across sectors.
 
 ## Q4 Which industry has the highest systematic risk?
 
